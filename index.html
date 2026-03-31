@@ -50,56 +50,52 @@
             <button type="submit">Отправить в облако</button>
         </form>
     </div>
+
+    <script type="module">
+        // Импортируем модули Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-analytics.js";
+        // !!! ДОБАВЛЕНЫ ИМПОРТЫ ДЛЯ FIRESTORE !!!
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+        // Твоя конфигурация веб-приложения Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyDXWhI1YN5_iaAmowLVOBhQ0VvZc9r2JPQ",
+            authDomain: "svinki-537bf.firebaseapp.com",
+            projectId: "svinki-537bf",
+            storageBucket: "svinki-537bf.firebasestorage.app",
+            messagingSenderId: "154131271954",
+            appId: "1:154131271954:web:88d09f1a9f7af0cf9d63cb",
+            measurementId: "G-ZB1BVPBQNV"
+        };
+
+        // Инициализация Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app); // Если ты используешь Analytics
+        const db = getFirestore(app); // Инициализация Firestore
+
+        // Логика кнопки
+        document.getElementById("feedbackForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const nameInput = document.getElementById("userName").value;
+            const emailInput = document.getElementById("userEmail").value;
+
+            try {
+                // Запись в коллекцию "requests"
+                await addDoc(collection(db, "requests"), {
+                    name: nameInput,
+                    email: emailInput,
+                    timestamp: new Date()
+                });
+                alert("Готово! Данные сохранены в Firebase.");
+                document.getElementById("feedbackForm").reset();
+            } catch (error) {
+                console.error("Ошибка записи:", error);
+                alert("Ошибка при отправке.");
+            }
+        });
+    </script>
 </body>
 </html>
 
-<script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
-
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
-    apiKey: "AIzaSyDXWhI1YN5_iaAmowLVOBhQ0VvZc9r2JPQ",
-    authDomain: "svinki-537bf.firebaseapp.com",
-    projectId: "svinki-537bf",
-    storageBucket: "svinki-537bf.firebasestorage.app",
-    messagingSenderId: "154131271954",
-    appId: "1:154131271954:web:88d09f1a9f7af0cf9d63cb",
-    measurementId: "G-ZB1BVPBQNV"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-</script>
-
-    // Инициализация
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    // Логика кнопки
-    document.getElementById("feedbackForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
-
-        const nameInput = document.getElementById("userName").value;
-        const emailInput = document.getElementById("userEmail").value;
-
-        try {
-            // Запись в коллекцию "requests"
-            await addDoc(collection(db, "requests"), {
-                name: nameInput,
-                email: emailInput,
-                timestamp: new Date()
-            });
-            alert("Готово! Данные сохранены в Firebase.");
-            document.getElementById("feedbackForm").reset();
-        } catch (error) {
-            console.error("Ошибка записи:", error);
-            alert("Ошибка при отправке.");
-        }
-    });
-</script>
