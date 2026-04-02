@@ -69,6 +69,53 @@
             measurementId: "G-ZB1BVPBQNV"
         };
 
+        // МЕТОД: АТОМАРНОЕ ОБНОВЛЕНИЕ (LIKES)
+        window.processLike = async (id) => {
+          const docRef = doc(db, "requests", id);
+          try {
+            await updateDoc(docRef, { likes: increment(1) });
+          } catch (e) { console.error("Validation Error:", e.message); }
+        };
+
+                // МЕТОД: ЗАПИСЬ С ВАЛИДАЦИЕЙ
+        document.getElementById('mainBtn').onclick = async () => {
+          const btn = document.getElementById('mainBtn');
+          btn.disabled = true;
+          try {
+            await addDoc(collection(db, "requests"), {
+              name: document.getElementById('name').value,
+              email: document.getElementById('email').value,
+              likes: 0,
+              timestamp: serverTimestamp()
+            });
+            document.getElementById('email').value = "";
+          } catch (e) { alert("Ошибка безопасности: данные отклонены сервером."); }
+          btn.disabled = false;
+        };
+
+        // МЕТОД: REAL-TIME СИНХРОНИЗАЦИЯ
+        
+        const q = query(collection(db, "requests"), orderBy("timestamp", "desc"));
+        onSnapshot(q, (snapshot) => {
+          const feed = document.getElementById('feed');
+          feed.innerHTML = "";
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            feed.innerHTML += `
+              <div class="post">
+                <span class="time">${data.timestamp?.toDate().toLocaleTimeString() || '--'}</span>
+                <b>${data.name}</b>
+                <p style='margin: 5px 0;'>${data.email}</p>
+                <button class='like-btn' onclick="processLike('${doc.id}')">👍 ${data.likes || 0}</button>
+              </div>
+            `;
+          });
+        });
+
+
+
+
+
         // Инициализация Firebase
         const app = initializeApp(firebaseConfig);
         const analytics = getAnalytics(app); // Если ты используешь Analytics
