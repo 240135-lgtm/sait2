@@ -55,8 +55,8 @@
         // Импортируем модули Firebase
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-analytics.js";
-        // !!! ДОБАВЛЕНЫ ИМПОРТЫ ДЛЯ FIRESTORE !!!
-        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+        // Важные импорты для Firestore, включая serverTimestamp
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
         // Твоя конфигурация веб-приложения Firebase
         const firebaseConfig = {
@@ -69,61 +69,14 @@
             measurementId: "G-ZB1BVPBQNV"
         };
 
-        // МЕТОД: АТОМАРНОЕ ОБНОВЛЕНИЕ (LIKES)
-        window.processLike = async (id) => {
-          const docRef = doc(db, "requests", id);
-          try {
-            await updateDoc(docRef, { likes: increment(1) });
-          } catch (e) { console.error("Validation Error:", e.message); }
-        };
-
-                // МЕТОД: ЗАПИСЬ С ВАЛИДАЦИЕЙ
-        document.getElementById('mainBtn').onclick = async () => {
-          const btn = document.getElementById('mainBtn');
-          btn.disabled = true;
-          try {
-            await addDoc(collection(db, "requests"), {
-              name: document.getElementById('name').value,
-              email: document.getElementById('email').value,
-              likes: 0,
-              timestamp: serverTimestamp()
-            });
-            document.getElementById('email').value = "";
-          } catch (e) { alert("Ошибка безопасности: данные отклонены сервером."); }
-          btn.disabled = false;
-        };
-
-        // МЕТОД: REAL-TIME СИНХРОНИЗАЦИЯ
-        
-        const q = query(collection(db, "requests"), orderBy("timestamp", "desc"));
-        onSnapshot(q, (snapshot) => {
-          const feed = document.getElementById('feed');
-          feed.innerHTML = "";
-          snapshot.forEach((doc) => {
-            const data = doc.data();
-            feed.innerHTML += `
-              <div class="post">
-                <span class="time">${data.timestamp?.toDate().toLocaleTimeString() || '--'}</span>
-                <b>${data.name}</b>
-                <p style='margin: 5px 0;'>${data.email}</p>
-                <button class='like-btn' onclick="processLike('${doc.id}')">👍 ${data.likes || 0}</button>
-              </div>
-            `;
-          });
-        });
-
-
-
-
-
         // Инициализация Firebase
         const app = initializeApp(firebaseConfig);
         const analytics = getAnalytics(app); // Если ты используешь Analytics
         const db = getFirestore(app); // Инициализация Firestore
 
-        // Логика кнопки
+        // Логика отправки формы
         document.getElementById("feedbackForm").addEventListener("submit", async (e) => {
-            e.preventDefault();
+            e.preventDefault(); // Предотвращаем стандартное поведение формы (перезагрузку страницы)
 
             const nameInput = document.getElementById("userName").value;
             const emailInput = document.getElementById("userEmail").value;
@@ -133,16 +86,23 @@
                 await addDoc(collection(db, "requests"), {
                     name: nameInput,
                     email: emailInput,
-                    timestamp: new Date()
+                    timestamp: serverTimestamp(), // Используем serverTimestamp для консистентного времени
+                    likes: 0 // Добавляем поле likes, так как оно есть в ваших правилах безопасности
                 });
-                alert("Готово! Данные сохранены в Firebase.");
-                document.getElementById("feedbackForm").reset();
+                alert("Готово! Данные успешно сохранены в Firebase.");
+                document.getElementById("feedbackForm").reset(); // Очищаем форму после отправки
             } catch (error) {
-                console.error("Ошибка записи:", error);
-                alert("Ошибка при отправке.");
+                console.error("Ошибка записи в Firestore:", error);
+                // Проверяем, является ли ошибка ошибкой безопасности Firestore (Permission denied)
+                if (error.code === 'permission-denied') {
+                    alert("Ошибка безопасности: данные отклонены сервером Firebase. Проверьте ваши правила безопасности Firestore.");
+                } else {
+                    alert("Произошла ошибка при отправке заявки. Пожалуйста, попробуйте еще раз.");
+                }
             }
         });
     </script>
 </body>
 </html>
+
 
