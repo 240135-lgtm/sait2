@@ -59,13 +59,15 @@
         // Импорт инструментов авторизации
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
 
-        // ТВОИ КЛЮЧИ FIREBASE (Замени на свои!)
-        const firebaseConfig = {
-            apiKey: "AIzaSy...",
-            authDomain: "qazaq-0072e.firebaseapp.com",
-            projectId: "qazaq-0072e",
+             const firebaseConfig = {
+          apiKey: "AIzaSyDXWhI1YN5_iaAmowLVOBhQ0VvZc9r2JPQ",
+          authDomain: "svinki-537bf.firebaseapp.com",
+          projectId: "svinki-537bf",
+          storageBucket: "svinki-537bf.firebasestorage.app",
+          messagingSenderId: "154131271954",
+          appId: "1:154131271954:web:88d09f1a9f7af0cf9d63cb",
+          measurementId: "G-ZB1BVPBQNV"
         };
-
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
