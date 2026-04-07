@@ -55,10 +55,8 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
         import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, updateDoc, doc, increment, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
-        // Импорт Storage для картинок
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-storage.js";
 
-        // ТВОИ РЕАЛЬНЫЕ КЛЮЧИ
         const firebaseConfig = {
             apiKey: "AIzaSyDXWhI1YN5_iaAmowLVOBhQ0VvZc9r2JPQ",
             authDomain: "svinki-537bf.firebaseapp.com",
@@ -72,7 +70,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
-        const storage = getStorage(app); // Инициализация хранилища
+        const storage = getStorage(app);
         const provider = new GoogleAuthProvider();
 
         const loginBtn = document.getElementById('loginBtn');
@@ -99,88 +97,85 @@
             }
         });
 
-        // Функции управления
         window.processLike = async (id) => {
-            if (!auth.currentUser) return alert("Войдите для этого действия!");
+            if (!auth.currentUser) return alert("Войдите!");
             await updateDoc(doc(db, "requests", id), { likes: increment(1) });
         };
 
         window.processDislike = async (id) => {
-            if (!auth.currentUser) return alert("Войдите для этого действия!");
+            if (!auth.currentUser) return alert("Войдите!");
             await updateDoc(doc(db, "requests", id), { likes: increment(-1) });
         };
 
         window.editName = async (id) => {
-            if (!auth.currentUser) return alert("Войдите для редактирования!");
-            const newName = prompt("Введите новое имя профиля:");
-            if (newName && newName.trim() !== "") {
+            if (!auth.currentUser) return alert("Войдите!");
+            const newName = prompt("Новое имя:");
+            if (newName) {
                 await updateDoc(doc(db, "requests", id), { name: newName });
             }
         };
 
         window.deletePost = async (id) => {
-            if (!auth.currentUser) return alert("Войдите для удаления!");
-            if (confirm("Вы уверены, что хотите удалить этот пост?")) {
+            if (!auth.currentUser) return alert("Войдите!");
+            if (confirm("Удалить пост?")) {
                 await deleteDoc(doc(db, "requests", id));
             }
         };
 
-        // Публикация поста с картинкой
         document.getElementById('mainBtn').onclick = async () => {
             const content = document.getElementById('content').value;
-            const fileInput = document.getElementById('imageInput');
-            const file = fileInput.files[0];
+            const file = document.getElementById('imageInput').files[0];
 
-            if (!content && !file) return alert("Введите текст или выберите картинку!");
-            
-            // Меняем текст кнопки, чтобы показать процесс загрузки
+            if (!content && !file) return alert("Введите текст или картинку!");
+
             const btn = document.getElementById('mainBtn');
             btn.innerText = "Загрузка...";
             btn.disabled = true;
 
             try {
                 let imageUrl = "";
-                
-                // Если пользователь выбрал картинку, грузим её в Storage
+
                 if (file) {
                     const storageRef = ref(storage, 'images/' + Date.now() + '_' + file.name);
                     await uploadBytes(storageRef, file);
                     imageUrl = await getDownloadURL(storageRef);
                 }
 
-                // Сохраняем данные в Firestore
                 await addDoc(collection(db, "requests"), {
                     name: auth.currentUser.displayName,
                     email: auth.currentUser.email,
                     photo: auth.currentUser.photoURL,
+                    uid: auth.currentUser.uid, // 🔐 владелец
                     text: content,
-                    imageUrl: imageUrl, // Ссылка на картинку
+                    imageUrl: imageUrl,
                     likes: 0,
                     timestamp: serverTimestamp()
                 });
 
-                document.getElementById('content').value = ''; 
-                fileInput.value = ''; 
+                document.getElementById('content').value = '';
+                document.getElementById('imageInput').value = '';
+
             } catch (e) {
                 console.error(e);
-                alert("Ошибка! Проверьте правила (Rules) в Firebase.");
+                alert("Ошибка! Проверь Rules!");
             } finally {
                 btn.innerText = "Опубликовать в облако";
                 btn.disabled = false;
             }
         };
 
-        // Отображение ленты
         const q = query(collection(db, "requests"), orderBy("timestamp", "desc"));
+
         onSnapshot(q, (snapshot) => {
             const feed = document.getElementById('feed');
             feed.innerHTML = "";
+
             snapshot.forEach((docItem) => {
                 const data = docItem.data();
                 const timeString = data.timestamp ? data.timestamp.toDate().toLocaleTimeString() : "...";
-                
-                // Если есть картинка, добавляем тег img
-                const imageHtml = data.imageUrl ? `<img src="${data.imageUrl}" class="post-img">` : '';
+                const imageHtml = data.imageUrl ? `<img src="${data.imageUrl}" class="post-img">` : "";
+
+                const isOwner = auth.currentUser && auth.currentUser.uid === data.uid;
 
                 feed.innerHTML += `
                     <div class="post">
@@ -189,14 +184,17 @@
                             <b>${data.name}</b>
                             <span class="time">${timeString}</span>
                         </div>
-                        <p style="margin: 5px 0;">${data.text || ""}</p>
+                        <p>${data.text || ""}</p>
                         ${imageHtml}
-                        
+
                         <div class="actions">
                             <button class="action-btn" onclick="processLike('${docItem.id}')">👍 ${data.likes || 0}</button>
                             <button class="action-btn" onclick="processDislike('${docItem.id}')">👎</button>
-                            <button class="action-btn" onclick="editName('${docItem.id}')">✏️ Изменить</button>
-                            <button class="action-btn delete-btn" onclick="deletePost('${docItem.id}')">🗑️ Удалить</button>
+
+                            ${isOwner ? `
+                                <button class="action-btn" onclick="editName('${docItem.id}')">✏️ Изменить</button>
+                                <button class="action-btn delete-btn" onclick="deletePost('${docItem.id}')">🗑️ Удалить</button>
+                            ` : ""}
                         </div>
                     </div>
                 `;
